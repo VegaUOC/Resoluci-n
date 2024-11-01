@@ -1,0 +1,129 @@
+---
+title: "PEC1. Análisis de datos Ómicos."
+author: "<i>Mª de la Vega Rodrigálvarez Chamarro</i>"
+date: '<i>`r format(Sys.Date(),"%e de %B, %Y")`</i>'
+output: 
+  pdf_document:
+    toc: true
+    toc_depth: 3
+    number_sections: true
+    latex_engine: xelatex
+    fig_caption: yes
+  bookdown::html_document2:
+    toc: true
+    toc_float: true
+    toc_depht: 3
+    number_sections: true
+    latex_engine: xelatex
+    fig_caption: true
+  html_document:
+    toc: true
+    toc_float: true
+    toc_depth: 3
+    number_sections: true
+    latex_engine: xelatex
+    fig_caption: true
+editor_options: 
+  markdown: 
+    wrap: 72
+  chunk_output_type: console
+bibliography: scholar.bib
+csl: apa.csl
+params:
+   seq_file: data/sequences.txt
+   label_file: data/labels.txt
+   train_set: !r 0.67
+   k_value: !r c(1,5,11,21,51,71)
+---
+
+```{r setup, include=FALSE}
+setwd(paste0("C:/ITA - Division/Formacion/2023/Máster en Biocomputación y BioInformática/Semestre 04/",
+      "07 Análisis Datos Ómicos/PEC1/Resolucion/"))
+
+knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(warning = FALSE, message = FALSE) 
+```
+
+```{r libraries, include=FALSE}
+# Install packages
+# Load packages
+
+library(knitr)
+
+# Paquete de trabajo para el tratamiento de cadenas
+if (!require(stringr)){
+  install.packages("stringr")
+  library("stringr")
+}
+
+# Paquete para particionar los datos y matrices de confusión
+if (!require(caret)){
+  install.packages("caret")
+  library("caret")
+}
+
+# Paquete para algoritmo knn
+if (!require(class)){
+  install.packages("class")
+  library("class")
+}
+
+# Paquete para matrices de confusión
+if (!require(gmodels)){
+  install.packages("gmodels")
+  library(gmodels)
+}
+
+# Paquete para mostrar las curvas ROC
+if (!require(ROCR)){
+  install.packages("ROCR")
+  library(ROCR)
+}
+
+# Paquete para dibujar las secuencias logo
+if (!require(ggseqlogo)){
+  install.packages("ggseqlogo")
+  library(ggseqlogo)
+}
+```
+
+```{r input, include=FALSE}
+# Input / Output variables
+# Tuning parameters
+# ...
+file_data <- "wisc_bc_data.csv"
+
+```
+
+# Resumen ejecutivo
+
+> *con un breve resumen sobre el proceso y los principales resultados. No debe exceder de una página.*
+
+# Objetivos del estudio
+
+> **Debe de quedar bien claro cuáles son los objetivos de vuestro trabajo. Breves, media página a lo sumo.**
+
+Manejo de la librería BioConductor y una de sus clases *SummarizedExperiment*
+Análsis conjunto de datos -> Cancer Gástrico 
+
+# Materiales y métodos
+
+> *Con qué y cómo habéis trabajado. Variará según el caso, pero habitualmente contendrá: Origen (fuente) y naturaleza (tipo) de los datos; herramientas informáticas y bioinformáticas utilizadas. procedimiento general de análisis; métodos utilizados; Una o dos páginas como mucho*
+
+# Resultados
+
+> *Los resultados deben responder las preguntas planteadas. Si la pregunta es ambigua (¨Exploración de los datos”) o admite distintas interpretaciones podéis ser flexibles, pero explicad siempre porque hacéis lo que hacéis, y, ante la duda, referiros a los materiales y ejemplos de referencia. La mejor herramienta para redactar el informe es Rmarkdown o Quarto 1 que permiten generar documentos que integran, explicaciones, análisis y resultados y os prepara para el trabajo profesional en bioinformática. Es importante que vuestro informe no sea un volcado de código y salidas de R sin explicaciones, debe de ser un texto legible y fácil de seguir. Obviamente, esto no es una regla estricta. Si, en ocasiones, (de tablas o gráficos que formen parte de la explicación, por el contexto tiene sentido que se vean algunas instrucciones de R, adelante con ellas. pero no deben impedir leer el documento. Extension habitual 5-10 páginas*
+
+# Discusión, limitaciones y conclusiones del estudio
+
+> *Incluso si el estudio no es original, puede tener sentido que reflexionéis sobre las limitaciones del estudio y que proporcionéis vuestras conclusiones, más sobre lo que habéis hecho que sobre el problema biológico que acompaña vuestra PEC.; no más de una página.*
+
+# Addenda
+
+Este documento se ha basado en el capítulo 3 y en el capítulo 10 de la segunda edición del libro *Machine Learning with R* de [@beck2000nuevo].
+
+# References
+
+
+
+
