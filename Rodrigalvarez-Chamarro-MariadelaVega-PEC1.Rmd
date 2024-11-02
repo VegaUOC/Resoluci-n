@@ -27,19 +27,20 @@ editor_options:
   markdown: 
     wrap: 72
   chunk_output_type: console
-bibliography: scholar.bib
-csl: apa.csl
+bibliography: bib/scholar.bib
+csl: bib/apa.csl
 params:
    seq_file: data/sequences.txt
    label_file: data/labels.txt
    train_set: !r 0.67
    k_value: !r c(1,5,11,21,51,71)
+   xls_file: data/GastricCancer/GastricCancer_NMR.xlsx
+   samples_sheet: Data
+   rows_sheet: Peak
+   meta_file: data/GastricCancer/description.md
 ---
 
 ```{r setup, include=FALSE}
-setwd(paste0("C:/ITA - Division/Formacion/2023/Máster en Biocomputación y BioInformática/Semestre 04/",
-      "07 Análisis Datos Ómicos/PEC1/Resolucion/"))
-
 knitr::opts_chunk$set(echo = TRUE)
 knitr::opts_chunk$set(warning = FALSE, message = FALSE) 
 ```
@@ -50,69 +51,132 @@ knitr::opts_chunk$set(warning = FALSE, message = FALSE)
 
 library(knitr)
 
-# Paquete de trabajo para el tratamiento de cadenas
-if (!require(stringr)){
-  install.packages("stringr")
-  library("stringr")
+# Librería Bioconductor
+if (!require("BiocManager", quietly = TRUE))
+  install.packages("BiocManager")
+
+BiocManager::install("SummarizedExperiment")
+library("SummarizedExperiment")
+
+BiocManager::install("POMA")
+library("POMA")
+
+# Paquete de trabajo para la carga de datos en excelz
+if (!require(readxl)){
+  install.packages("readxl")
+  library(readxl)
 }
 
-# Paquete para particionar los datos y matrices de confusión
-if (!require(caret)){
-  install.packages("caret")
-  library("caret")
-}
 
-# Paquete para algoritmo knn
-if (!require(class)){
-  install.packages("class")
-  library("class")
-}
-
-# Paquete para matrices de confusión
-if (!require(gmodels)){
-  install.packages("gmodels")
-  library(gmodels)
-}
-
-# Paquete para mostrar las curvas ROC
-if (!require(ROCR)){
-  install.packages("ROCR")
-  library(ROCR)
-}
-
-# Paquete para dibujar las secuencias logo
-if (!require(ggseqlogo)){
-  install.packages("ggseqlogo")
-  library(ggseqlogo)
-}
 ```
 
 ```{r input, include=FALSE}
 # Input / Output variables
 # Tuning parameters
 # ...
-file_data <- "wisc_bc_data.csv"
 
 ```
+
+```{R CargaDatos, include=FALSE}
+# Leer los datos desde el archivo Excel
+samples_data <- read_xlsx(params$xls_file,sheet = params$samples_sheet,col_names = TRUE)
+row_data <- read_xlsx(params$xls_file,sheet = params$rows_sheet,col_names = TRUE)
+meta_info <-  readLines(params$meta_file)
+
+# Crear los conjuntos de datos para generar el Summarized Experiment
+samples_matrix <- t(as.matrix(samples_data[,5:153]))
+colnames(samples_matrix) <- unlist(samples_data[,2])
+rows_info <- DataFrame(row_data[,2:5])
+cols_info <- DataFrame(samples_data[,2:4])
+
+# Refactorización clase dentro las columnas.
+cols_info$Class <- factor(cols_info$Class, levels = c("QC", "GC", "BN", "HE"),
+                          labels = c("Quality Control", "Gastric Cancer", "Benign", "Healthy"))
+
+# Construye el objeto SummarizedExperiment
+se <- SummarizedExperiment(assays=samples_matrix, colData=cols_info, rowData = rows_info, metadata =meta_info)
+se
+```
+
 
 # Resumen ejecutivo
 
 > *con un breve resumen sobre el proceso y los principales resultados. No debe exceder de una página.*
 
+\newpage
+
 # Objetivos del estudio
 
-> **Debe de quedar bien claro cuáles son los objetivos de vuestro trabajo. Breves, media página a lo sumo.**
+> *Debe de quedar bien claro cuáles son los objetivos de vuestro trabajo. Breves, media página a lo sumo.*
 
-Manejo de la librería BioConductor y una de sus clases *SummarizedExperiment*
-Análsis conjunto de datos -> Cancer Gástrico 
+El principal objetivo del trabajo es la realización de un análisis exploratorio del conjunto de datos **2023-CIMCBTutorial** que ofrece datos de resonancias magnéticas (*NMR*) de un estudio del cáncer gástrico utilizados en un tutorial de análisis metabolómicos. El conjunto de datos contiene un total de `r dim(se)[1]` variables metabólicas recogidas de `r dim(se)[2]` individuos humanos. Cada individuo se encuentra clasificado dentro de una categoría según su perfil metabólico en orina $^1$H-NMR donde **GC** es cáncer gástrico, **BN** es benigno y **HE** es un individuo sano. Existe un cuarto grupo que es el denominado grupo de control (**QC**). Se pretende estudiar si hay algún tipo de relación o agrupación entre las diferentes variables metabólicas y el grupo al que pertenece el individuo al que pertence la muestra.
+
+Como objetivo secundario, se trabajará con el objeto *SummarizedExperiment* perteneciente a la librería *BioConductor* con la finalidad de conocer mejor el uso de dicha librería.
 
 # Materiales y métodos
 
 > *Con qué y cómo habéis trabajado. Variará según el caso, pero habitualmente contendrá: Origen (fuente) y naturaleza (tipo) de los datos; herramientas informáticas y bioinformáticas utilizadas. procedimiento general de análisis; métodos utilizados; Una o dos páginas como mucho*
 
+Los datos utilizados para el presente análisis exploratorio han sido descargados del repositorio de github metaboData[^1], publicado por Alex Sánchez Pla. El conjunto de datos seleccionado es el que proviene de un estudio de cáncer gástrico usado en un tutorial de análisis de datos metabolomicos[^2].
+
+[^1]: https://github.com/nutrimetabolomics/metaboData/
+[^2]: [Basic Metabolomics Data Analysis Workflow](https://cimcb.github.io/MetabWorkflowTutorial/Tutorial1.html)
+
+El origen de estos datos provienen de un estudio, desarrollado por la Universidad de Alberta y cuyo investigador principal es David Broadhurst ([PR000699](https://www.metabolomicsworkbench.org/data/DRCCMetadata.php?Mode=Project&ProjectID=PR000699)), cuyo principal objetivo del estudio era identificar si el cáncer gástrico (GC) tiene un perfil metabolómico urinario diferente en comparación con la enfermedad gástrica benigna (BN) y los pacientes sanos (HE). Para ello, se han recogido muestras de `r summary(colData(se)$Class)[[2]]` pacientes con cáncer gástrico, `r summary(colData(se)$Class)[[3]]` con enfermedad gástrica benigna y `r summary(colData(se)$Class)[[4]]` pacientes sanos. Además, se han recogido muestras de otros `r summary(colData(se)$Class)[[1]]` pacientes que actuaran como grupo de control de la calidad. En este estudio, se llegó a la conclusión que los pacientes con GC presentaban un perfil metabólico urinario diferenciado del resto, dejando claro el potencial que el perfil metabólico puede tener para el diagnóstico precoz de cáncer gástrico.
+
+Para cada individuo se ha recogido la concentración de un total de `r dim(se)[1]` variables metabólicas diferentes. Además de estas variables se encuentra la columna *SampleType* donde se indica si el individuo forma parte del grupo de control, o de las muestras y la columna *Class* que indica el resultado clínico observado para cada individuo.
+
+Para cada una de las medidas metabólicas se encuentran los siguientes metadatos asociados:
+
+* *Name*: Nombre asignado a la concentración metabólica.
+* *Label*: Proporciona un nombre único para cada metabolito.
+* *Perc_missing*: Índica el número de muestras que no tienen la medida de dicho metabolito (datos perdidos).
+* *QC_RSD*: es una puntuación de calidad que representa la variación en las mediciones de este metabolito en todas las muestras.
+
+Estos datos se encontraban almacenados en un libro excel. En la hoja denominada *Data* se encontraban recogidas las concentraciones metabólicas para cada uno de los individuos, así como, la información relativa al tipo de muestra y la clase de la misma. En la hoja denominada *Peak* se encuentran los metadatos de las concentraciones metabólicas. 
+
+Para poder utilizar los datos, han sido cargados en un objeto de clase *SummarizedExperiment* que pertenece a librería *Bioconductor*.  Los datos relativos a las concentraciones metabólicas han sido cargados dentro de una matriz de ensayos (assays), para ello ha sido necesario cargar la hoja *Data* del libro Excel, tomar desde la columna 5 a la 153 y hacer su transformada para que las filas correspondan con las variables de la concentración y las columnas con las muestras para cada individuo. Dentro de *rowData* se han insertado los metadatos de las concentraciones que se encuentran en la hoja *Peak*, que previamente habían sido cargados en un dataframe. Las columnas entre la 2 y la 5 de la hoja *Data* son los metadatos de las diferentes muestras que han sido cargados en un dataframe y almacenados en *colData*. La descripción de la información que contiene este archivo se ha cargado desde el fichero *description.md* en una lista y se ha almacenado bajo *metadata*.
+
+Antes de comenzar con el análisis exploratorio de los datos, es importante evaluar la calidad de los datos y borrar aquellas variables que no tengan la suficiente información o realizar imputaciones con valores estándar cuando la falta de información sea menor tal y como se indica en [@Broadhurst2018]. Para este conjunto de datos únicamente se mantendrán los metabólitos que cumplan los siguientes criterios:
+
+* El valor de **QC-RCD** sea menor o igual del 20%, es decir, que la variación de las medidas a lo largo de todas las muestras sea menor del 20%.
+* Aquellos cuyo completitud sea mayor del 90%, es decir, que más del 90% de los individuos tengan recogida esa concentración. 
+* Para aquellos metabolitos que tengan valores perdidos en alguna de sus muestra, pero que no supere el 10% de datos perdidos, se realizará una imputación de las variables aplicando el algoritmo de los vecinos más cercanos (knn).
+
+
+
+[TODO]
+
+Normalización - Analisis univariante
+
+Análisis exploratorio POMA, PCA
+
+
 # Resultados
 
 > *Los resultados deben responder las preguntas planteadas. Si la pregunta es ambigua (¨Exploración de los datos”) o admite distintas interpretaciones podéis ser flexibles, pero explicad siempre porque hacéis lo que hacéis, y, ante la duda, referiros a los materiales y ejemplos de referencia. La mejor herramienta para redactar el informe es Rmarkdown o Quarto 1 que permiten generar documentos que integran, explicaciones, análisis y resultados y os prepara para el trabajo profesional en bioinformática. Es importante que vuestro informe no sea un volcado de código y salidas de R sin explicaciones, debe de ser un texto legible y fácil de seguir. Obviamente, esto no es una regla estricta. Si, en ocasiones, (de tablas o gráficos que formen parte de la explicación, por el contexto tiene sentido que se vean algunas instrucciones de R, adelante con ellas. pero no deben impedir leer el documento. Extension habitual 5-10 páginas*
+
+***Preprocesado de la información***
+
+```{R Preprocesado, include=FALSE}
+## Prepocesado de la información
+
+## -  QC_RSD <= 20%  variation in measurements of this metabolite across all samples.
+nonRemovedRows <- rowData(se)$QC_RSD <= 20
+se_preprocessed <- se[nonRemovedRows,]
+
+## -  Eliminar variables que tengan más de un 10% de missing values y el resto imputar aplicando el algoritmo Knn
+se_preprocessed <- PomaImpute(se_preprocessed,zeros_as_na = FALSE, remove_na = TRUE, cutoff = 10, method = "knn")
+
+# Copiar el rowData que se ha perdido
+rowData(se_preprocessed) <- rowData(se)[rownames(se_preprocessed),]
+```
+
+Una vez realizada la limpieza de datos, la matriz de metabolitos se ha reducido considerablemente quedando un total de `r dim(se_preprocessed)[1]` variables tomadas de `r dim(se_preprocessed)[2]` individuos. A continuación, se muestra el listado de las variables que se van a someter a estudio.
+
+`r knitr::kable(rowData(se_preprocessed), col.names = colnames(rowData(se_preprocessed)),booktabs = TRUE, caption = 'Metabolitos a estudio')`
+
+
 
 # Discusión, limitaciones y conclusiones del estudio
 
@@ -120,7 +184,7 @@ Análsis conjunto de datos -> Cancer Gástrico
 
 # Addenda
 
-Este documento se ha basado en el capítulo 3 y en el capítulo 10 de la segunda edición del libro *Machine Learning with R* de [@beck2000nuevo].
+Este documento se ha basado en el capítulo 3 y en el capítulo 10 de la segunda edición del libro *Machine Learning with R* de ....
 
 # References
 
