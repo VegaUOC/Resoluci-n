@@ -55,10 +55,13 @@ library(knitr)
 if (!require("BiocManager", quietly = TRUE))
   install.packages("BiocManager")
 
-BiocManager::install("SummarizedExperiment")
+if(!require("SummarizedExperiment"))
+  BiocManager::install("SummarizedExperiment")
+
 library("SummarizedExperiment")
 
-BiocManager::install("POMA")
+if(!require("POMA"))
+  BiocManager::install("POMA")
 library("POMA")
 
 # Paquete de trabajo para la carga de datos en excelz
@@ -143,7 +146,7 @@ Antes de comenzar con el análisis exploratorio de los datos, es importante eval
 * Aquellos cuyo completitud sea mayor del 90%, es decir, que más del 90% de los individuos tengan recogida esa concentración. 
 * Para aquellos metabolitos que tengan valores perdidos en alguna de sus muestra, pero que no supere el 10% de datos perdidos, se realizará una imputación de las variables aplicando el algoritmo de los vecinos más cercanos (knn).
 
-
+Una vez se han descartado todas aquellas variables que no tienen calidad suficiente, se procederá a realizar un analisis univariente donde se muestra que valores toma cada una de ellas. Además se ha realizada un análisis de la varianza (ANOVA), para cada una de las variables, donde se puede ver si una variable por separados es significativa o no con respecto a las clases (CG, BN, HE).
 
 [TODO]
 
@@ -175,6 +178,41 @@ rowData(se_preprocessed) <- rowData(se)[rownames(se_preprocessed),]
 Una vez realizada la limpieza de datos, la matriz de metabolitos se ha reducido considerablemente quedando un total de `r dim(se_preprocessed)[1]` variables tomadas de `r dim(se_preprocessed)[2]` individuos. A continuación, se muestra el listado de las variables que se van a someter a estudio.
 
 `r knitr::kable(rowData(se_preprocessed), col.names = colnames(rowData(se_preprocessed)),booktabs = TRUE, caption = 'Metabolitos a estudio')`
+
+En primer lugar, se va a realizar un análisis univariante de las variables seleccionadas. Para cada variable se va extraer su el valor mínimo, el máximo, la mediana, la media, el valor al 25% (1º Cuartil) y al 75% (3º Cuartil). Además, para estudiar la significancia de cada una de las variables, se ha realizado un anális de la varianza para cada una de las variables, donde como hipótesis nula se asume que la diferencia entre valores con respecto a la clase de la muestra, es debida al azar. El alfa tomada es del de 0.05. A continuación, se muestra una tabla resumen con todas las variables y sus valores.
+
+```{R AnalisisUnivariante, include=FALSE}
+# Análisis univariante. cuartiles, medias y medianas de todas las variables
+
+resum <- data.frame(ID=NA, Min=NA, Q1=NA, Mediana=NA, Media=NA, Q3=NA, Max=NA,
+                    pValue=NA)
+grupo <- colData(se_preprocessed)$Class
+
+for (i in 1:length(rownames(se_preprocessed))){
+  sum <- round(summary(assays(se_preprocessed)[[1]][i,]),3)
+  resum[i,1:7] <- c(rownames(se_preprocessed)[i], sum[[1]], sum[[2]], sum[[3]], sum[[4]],
+                 sum[[5]],sum[[6]])
+  # ANOVA
+  # Hipotesis NULA. No existen diferencias en esta variable a la hora de generar los grupos (alfa = 0.05)
+  valor <- assays(se_preprocessed)[[1]][i,]
+  df <- data.frame(grupo,valor)
+  modelo_anova <- aov(valor ~ grupo, data = df)
+  p_value <- summary(modelo_anova)[[1]][["Pr(>F)"]][1]
+
+  resum$pValue[i] <- round(p_value,5)
+}
+
+```
+
+`r knitr::kable(resum, col.names = c("ID","Mínimo", "1º Cuartil", "Mediana", "Media","3º Cuartil", "Maximo", "p-Valor"),booktabs = TRUE, caption = 'Análisis univariente metabolitos')`
+
+Según el p-valor resultante del análisis de la varianza se puede observar:
+
+* Aquellas variables que pueden ser significativas a la hora de la detección del cáncer gástrico son (p-valor < 0.05): [`r resum$ID[resum$pValue<0.05]`].
+* Aquellas variables que pueden no ser significativas a la hora de la detección del cáncer gástrico son (p-valor >= 0.05): [`r resum$ID[resum$pValue>=0.05]`].
+
+Además, se puede observar, que los rangos de las variables son muy dispares unos de otros, por lo que será recomendable realizar una normalización cuando se hagan los análisis estadísticos.
+
 
 
 
