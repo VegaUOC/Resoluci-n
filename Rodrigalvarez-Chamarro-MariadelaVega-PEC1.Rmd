@@ -3,19 +3,6 @@ title: "PEC1. Análisis de datos Ómicos."
 author: "<i>Mª de la Vega Rodrigálvarez Chamarro</i>"
 date: '<i>`r format(Sys.Date(),"%e de %B, %Y")`</i>'
 output: 
-  pdf_document:
-    toc: true
-    toc_depth: 3
-    number_sections: true
-    latex_engine: xelatex
-    fig_caption: yes
-  bookdown::html_document2:
-    toc: true
-    toc_float: true
-    toc_depht: 3
-    number_sections: true
-    latex_engine: xelatex
-    fig_caption: true
   html_document:
     toc: true
     toc_float: true
@@ -23,6 +10,19 @@ output:
     number_sections: true
     latex_engine: xelatex
     fig_caption: true
+  bookdown::html_document2:
+    toc: true
+    toc_float: true
+    toc_depht: 3
+    number_sections: true
+    latex_engine: xelatex
+    fig_caption: true
+  pdf_document:
+    toc: true
+    toc_depth: 3
+    number_sections: true
+    latex_engine: xelatex
+    fig_caption: yes
 editor_options: 
   markdown: 
     wrap: 72
@@ -105,15 +105,17 @@ se
 
 # Resumen ejecutivo
 
-> *con un breve resumen sobre el proceso y los principales resultados. No debe exceder de una página.*
+Este estudio realiza un análisis exploratorio de datos de resonancia magnética (NMR) de muestras de orina, orientado al diagnóstico precoz del cáncer gástrico. A través del conjunto de datos 2023-CIMCBTutorial, se han analizado 149 metabolitos en cuatro categorías de pacientes: cáncer gástrico (GC), enfermedad benigna (BN), individuos sanos (HE), y un grupo de control (QC). Se evaluaron diferentes metabolitos y su relación con la clase del paciente, eliminando aquellos que no cumplían los criterios de calidad (tenían una variabilidad mayor del 20% y su completitud era menor al 90%).
+
+Los datos fueron procesados usando herramientas como *SummarizedExperiment* de la librería *BioConductor*. En el análisis, se realizaron pruebas de varianza (ANOVA) y componentes principales (PCA), identificando 20 metabolitos significativos. Sin embargo, no se observaron agrupaciones claras ni patrones que diferencien a los pacientes con cáncer gástrico, ni en los gráficos de calor ni en los diagramas de caja. Se concluye que el análisis exploratorio inicial es insuficiente y que serían necesarios modelos adicionales de machine learning para optimizar la detección temprana del cáncer gástrico.
 
 \newpage
 
 # Objetivos del estudio
 
-> *Debe de quedar bien claro cuáles son los objetivos de vuestro trabajo. Breves, media página a lo sumo.*  ***REPASAR***
+El principal objetivo del trabajo es la realización de un análisis exploratorio del conjunto de datos **2023-CIMCBTutorial** que ofrece datos de resonancias magnéticas (*NMR*) de un estudio del cáncer gástrico utilizados en un tutorial de análisis metabolómicos. El conjunto de datos contiene un total de `r dim(se)[1]` variables metabolómicas recogidas de `r dim(se)[2]` individuos humanos. Cada individuo se encuentra clasificado dentro de una categoría según su perfil metabolímico en orina $^1$H-NMR donde **GC** es cáncer gástrico, **BN** es benigno y **HE** es un individuo sano. Existe un cuarto grupo que es el denominado grupo de control (**QC**). 
 
-El principal objetivo del trabajo es la realización de un análisis exploratorio del conjunto de datos **2023-CIMCBTutorial** que ofrece datos de resonancias magnéticas (*NMR*) de un estudio del cáncer gástrico utilizados en un tutorial de análisis metabolómicos. El conjunto de datos contiene un total de `r dim(se)[1]` variables metabólicas recogidas de `r dim(se)[2]` individuos humanos. Cada individuo se encuentra clasificado dentro de una categoría según su perfil metabólico en orina $^1$H-NMR donde **GC** es cáncer gástrico, **BN** es benigno y **HE** es un individuo sano. Existe un cuarto grupo que es el denominado grupo de control (**QC**). Se pretende estudiar si hay algún tipo de relación o agrupación entre las diferentes variables metabólicas y el grupo al que pertenece el individuo al que pertence la muestra.
+Se pretende estudiar los diferentes metabolitos extraídos y si existe alguna relación con la clase a la que pertenece el individuo con el objeto de poder realizar un diagnóstico precoz del cáncer gástrico. Se eliminarán todas aquellas variables que no sean de calidad y se decidirá si es necesario continuar analizar diferentes modelos de Machine Learning que permitan ese diagnóstico.
 
 Como objetivo secundario, se trabajará con el objeto *SummarizedExperiment* perteneciente a la librería *BioConductor* con la finalidad de conocer mejor el uso de dicha librería.
 
@@ -124,30 +126,30 @@ Los datos utilizados para el presente análisis exploratorio han sido descargado
 [^1]: https://github.com/nutrimetabolomics/metaboData/
 [^2]: [Basic Metabolomics Data Analysis Workflow](https://cimcb.github.io/MetabWorkflowTutorial/Tutorial1.html)
 
-El origen de estos datos provienen de un estudio, desarrollado por la Universidad de Alberta y cuyo investigador principal es David Broadhurst ([PR000699](https://www.metabolomicsworkbench.org/data/DRCCMetadata.php?Mode=Project&ProjectID=PR000699)), cuyo principal objetivo del estudio era identificar si el cáncer gástrico (GC) tiene un perfil metabolómico urinario diferente en comparación con la enfermedad gástrica benigna (BN) y los pacientes sanos (HE). Para ello, se han recogido muestras de `r summary(colData(se)$Class)[[2]]` pacientes con cáncer gástrico, `r summary(colData(se)$Class)[[3]]` con enfermedad gástrica benigna y `r summary(colData(se)$Class)[[4]]` pacientes sanos. Además, se han recogido muestras de otros `r summary(colData(se)$Class)[[1]]` pacientes que actuaran como grupo de control de la calidad. En este estudio, se llegó a la conclusión que los pacientes con GC presentaban un perfil metabólico urinario diferenciado del resto, dejando claro el potencial que el perfil metabólico puede tener para el diagnóstico precoz de cáncer gástrico.
+El origen de estos datos provienen de un estudio, desarrollado por la Universidad de Alberta y cuyo investigador principal es David Broadhurst ([PR000699](https://www.metabolomicsworkbench.org/data/DRCCMetadata.php?Mode=Project&ProjectID=PR000699)), cuyo principal objetivo del estudio era identificar si el cáncer gástrico (GC) tiene un perfil metabolómico urinario diferente en comparación con la enfermedad gástrica benigna (BN) y los pacientes sanos (HE). Para ello, se han recogido muestras de `r summary(colData(se)$Class)[[2]]` pacientes con cáncer gástrico, `r summary(colData(se)$Class)[[3]]` con enfermedad gástrica benigna y `r summary(colData(se)$Class)[[4]]` pacientes sanos. Además, se han recogido muestras de otros `r summary(colData(se)$Class)[[1]]` pacientes que actuaran como grupo de control de la calidad. En este estudio, se llegó a la conclusión que los pacientes con GC presentaban un perfil metabolomico urinario diferenciado del resto, dejando claro el potencial que el perfil metabolómico puede tener para el diagnóstico precoz de cáncer gástrico.
 
-Para cada individuo se ha recogido la concentración de un total de `r dim(se)[1]` variables metabólicas diferentes. Además de estas variables se encuentra la columna *SampleType* donde se indica si el individuo forma parte del grupo de control, o de las muestras y la columna *Class* que indica el resultado clínico observado para cada individuo.
+Para cada individuo se ha recogido la concentración de un total de `r dim(se)[1]` variables metabolíticas diferentes. Además de estas variables, se encuentra la columna *SampleType* donde se indica si el individuo forma parte del grupo de control, o de las muestras y la columna *Class* que indica el resultado clínico observado para cada individuo.
 
-Para cada una de las medidas metabólicas se encuentran los siguientes metadatos asociados:
+Para cada una de las medidas metabolímicas se encuentran los siguientes metadatos asociados:
 
-* *Name*: Nombre asignado a la concentración metabólica.
+* *Name*: Nombre asignado a la concentración metabolómica.
 * *Label*: Proporciona un nombre único para cada metabolito.
 * *Perc_missing*: Índica el número de muestras que no tienen la medida de dicho metabolito (datos perdidos).
 * *QC_RSD*: es una puntuación de calidad que representa la variación en las mediciones de este metabolito en todas las muestras.
 
-Estos datos se encontraban almacenados en un libro excel. En la hoja denominada *Data* se encontraban recogidas las concentraciones metabólicas para cada uno de los individuos, así como, la información relativa al tipo de muestra y la clase de la misma. En la hoja denominada *Peak* se encuentran los metadatos de las concentraciones metabólicas. 
+Estos datos se encontraban almacenados en un libro excel. En la hoja denominada *Data* se encontraban recogidas las concentraciones metabolómicas para cada uno de los individuos, así como, la información relativa al tipo de muestra y la clase de la misma. En la hoja denominada *Peak* se encuentran los metadatos de las concentraciones metabolómicas. 
 
-Para poder utilizar los datos, han sido cargados en un objeto de clase *SummarizedExperiment* que pertenece a librería *Bioconductor*.  Los datos relativos a las concentraciones metabólicas han sido cargados dentro de una matriz de ensayos (assays), para ello ha sido necesario cargar la hoja *Data* del libro Excel, tomar desde la columna 5 a la 153 y hacer su transformada para que las filas correspondan con las variables de la concentración y las columnas con las muestras para cada individuo. Dentro de *rowData* se han insertado los metadatos de las concentraciones que se encuentran en la hoja *Peak*, que previamente habían sido cargados en un dataframe. Las columnas entre la 2 y la 5 de la hoja *Data* son los metadatos de las diferentes muestras que han sido cargados en un dataframe y almacenados en *colData*. La descripción de la información que contiene este archivo se ha cargado desde el fichero *description.md* en una lista y se ha almacenado bajo *metadata*.
+Para poder utilizar los datos, se han cargados en un objeto de clase *SummarizedExperiment* que pertenece a librería *Bioconductor*.  Los datos relativos a las concentraciones metabolómicas han sido cargados dentro de una matriz de ensayos (assays), para ello ha sido necesario cargar la hoja *Data* del libro Excel, tomar desde la columna 5 a la 153 y hacer su transformada para que las filas correspondan con las variables de la concentración y las columnas con las muestras para cada individuo. Dentro de *rowData* se han insertado los metadatos de las concentraciones que se encuentran en la hoja *Peak*, que previamente habían sido cargados en un dataframe. Las columnas entre la 3 y la 5 de la hoja *Data* son los metadatos de las diferentes muestras que han sido cargados en un dataframe y almacenados en *colData*. La descripción de la información que contiene este archivo se ha cargado desde el fichero *description.md* en una lista y se ha almacenado bajo *metadata*.
 
-Antes de comenzar con el análisis exploratorio de los datos, es importante evaluar la calidad de los datos y borrar aquellas variables que no tengan la suficiente información o realizar imputaciones con valores estándar cuando la falta de información sea menor tal y como se indica en [@Broadhurst2018]. Para este conjunto de datos únicamente se mantendrán los metabólitos que cumplan los siguientes criterios:
+Antes de comenzar con el análisis exploratorio de los datos, es importante evaluar la calidad de los datos y borrar aquellas variables que no tengan la suficiente información o realizar imputaciones con valores estándar cuando la falta de información sea menor tal y como se indica en [@Broadhurst2018]. Para este conjunto de datos únicamente se mantendrán los metabolitos que cumplan los siguientes criterios:
 
 * El valor de **QC-RCD** sea menor o igual del 20%, es decir, que la variación de las medidas a lo largo de todas las muestras sea menor del 20%.
 * Aquellos cuyo completitud sea mayor del 90%, es decir, que más del 90% de los individuos tengan recogida esa concentración. 
 * Para aquellos metabolitos que tengan valores perdidos en alguna de sus muestra, pero que no supere el 10% de datos perdidos, se realizará una imputación de las variables aplicando el algoritmo de los vecinos más cercanos (knn).
 
-Una vez se han descartado todas aquellas variables que no tienen calidad suficiente, se procederá a realizar un analisis univariente donde se muestra que valores toma cada una de ellas. Además se ha realizada un análisis de la varianza (ANOVA), para cada una de las variables, donde se puede ver si una variable por separados es significativa o no con respecto a las clases (CG, BN, HE). Por otra parte, para estudiar aquellas variables que están estrechamente correlacionadas, por lo que pueden dar un problema de multicolinealidad a la hora de crear un futuro modelo.
+Una vez descartadas todas aquellas variables que no tienen calidad suficiente, se ha procedido a realizar un análisis univariente donde se muestra el rango de valores que toma cada metabolito (valor mínimo, valor 1º cuartil, mediana, media, valor 3º cuartil, valor máximo). Además, se ha realizado un análisis de la varianza (ANOVA), para cada una de las variables, donde se puede ver si una variable por separado es significativa o no con respecto a las clases (CG, BN, HE). Por otra parte, se ha generado una matriz de correlación para estudiar aquellas variables que están estrechamente interrelacionadas unas con otras y que pueden causar un problema de multicolinealidad a la hora de crear un futuro modelo.
 
-Una vez finalizado el análisis univariante, se procederá a realizar un análisis de componentes principales con el fin de reducir la dimensionalidad perdiendo la menor cantidad de información posible donde los nuevos componentes principales o factores serán una combinación lineal de las variables originales, y además se independientes entre sí.
+Una vez finalizado el análisis univariante, se realiza un análisis de componentes principales (PCA) con el fin de reducir la dimensionalidad perdiendo la menor cantidad de información posible donde los nuevos componentes principales o factores son una combinación lineal de las variables originales, y además son independientes entre sí.
 
 Estos análisis se han realizado con todos los metabolitos que cumplen los criterios de calidad establecidos al inicio y únicamente con aquellas variables significativas en función del pValor obtenido con el análisis de la varianza.
 
@@ -173,7 +175,7 @@ Una vez realizada la limpieza de datos, la matriz de metabolitos se ha reducido 
 
 `r knitr::kable(rowData(se_preprocessed), col.names = colnames(rowData(se_preprocessed)),booktabs = TRUE, caption = 'Metabolitos a estudio')`
 
-En primer lugar, se va a realizar un análisis univariante de las variables seleccionadas. Para cada variable se va extraer su el valor mínimo, el máximo, la mediana, la media, el valor al 25% (1º Cuartil) y al 75% (3º Cuartil). Además, para estudiar la significancia de cada una de las variables, se ha realizado un anális de la varianza para cada una de las variables, donde como hipótesis nula se asume que la diferencia entre valores con respecto a la clase de la muestra, es debida al azar. El alfa tomada es del de 0.05. A continuación, se muestra una tabla resumen con todas las variables y sus valores.
+En primer lugar, se ha realizado un análisis univariante de las variables seleccionadas. Para cada variable, se va extraer su el valor mínimo, el máximo, la mediana, la media, el valor al 25% (1º Cuartil) y al 75% (3º Cuartil). Además, para estudiar la significancia de cada una de las variables, se ha realizado un anális de la varianza para cada una de las variables, donde como hipótesis nula se asume que la diferencia entre valores con respecto a la clase de la muestra, es debida al azar. El alfa tomada es del de 0.05. A continuación, se muestra una tabla resumen con todas las variables y sus valores.
 
 ***Análisis univariante***
 
@@ -211,7 +213,7 @@ Además, se puede observar, que los rangos de las variables son muy dispares uno
 
 ***Matriz de correlaciones***
 
-Después de normalizar las variables, se proceder a estudiar sy colinealidad. Se ha establecido el umbral`r params$threshold` para decidir si unos metabolitos están estrechamente relacionados con otros.
+Después de normalizar las variables, se estudia su colinealidad. Se ha establecido el umbral`r params$threshold` para decidir si unos metabolitos están estrechamente relacionados con otros.
 
 ```{R MatrizCorrelacion, include=FALSE}
 # Normalización y gráficas
@@ -234,7 +236,7 @@ high_corr_list <- data.frame(
 ```
 `r knitr::kable(high_corr_list, col.names = c("Metabolito 1","Metabolito 2", "Correlación"),booktabs = TRUE, caption = 'Matriz de alta correlación')`
 
-Como se puede observar en la tabla, la variable M88 tiene un gran alto grado de correlación con 6 variables más, por lo que puede existir una gran dependencia entre ellas. Sería importante analizarlo con mayor profundidad para decier si alguna de estos metabolitos se deberían omitir.
+Como se puede observar en la tabla, la variable M88 tiene un gran alto grado de correlación con 6 variables más, por lo que puede existir una gran dependencia entre ellas. Sería importante analizarlo con mayor profundidad para decidir si alguna de estos metabolitos debería ser eliminado en la generación de un modelo para el diagnóstico precoz de cáncer gástrico.
 
 ***Análisis de componentes principales (PCA)***
 
@@ -258,7 +260,7 @@ Como se puede observar en la tabla, el primer componente sólo explica un `r rou
 
 `r knitr::kable(round(t(vars1[1:14]),3), col.names = c(paste0("PC", seq(1, 14))),booktabs = TRUE, caption = 'Componentes principales más representativos')`
 
-Si se visualizan los dos primeros componentes se puede apreciar una pequeña diferenciación entre los diferentes grupos, quedando aquellos individuos con cáncer gástrico en la parte superior y aquellos con un tumor benigno y que están sanos más agrupados, aunque no se llega a distinguir una separación muy importante entre los grupos.
+Si se visualizan los dos primeros componentes se puede apreciar una pequeña diferenciación entre los grupos, quedando aquellos individuos con cáncer gástrico en la parte superior y aquellos con un tumor benigno y que están sanos más agrupados, aunque no se llega a distinguir una separación muy importante entre los grupos.
 
 ```{r fig.cap="Muestras 2 primeras PCA's \\label{fig:g1}",fig.align='center', fig.width=10, fig.height=5}
 # Explicar hasta que nivel de componentes principales se podría coger y justificar si son muchos o no.
@@ -275,11 +277,11 @@ legend("bottomright", legend = unique(unique(colData(se_normalized)$Class)),
        title = "Clases") 
 ```
 
-Si se muestra el mapa de calor (\@ref(fig:g2)) donde las muestras se observan en el eje de las X y los metabolitos en los ejes de la Y, se puede ver que no hay una gran diferencia entre los mismos para poder agruparlos según la clase.
+Si se muestra el mapa de calor (Figura \ref{fig:g2}) donde las muestras se observan en el eje de las X y los metabolitos en los ejes de la Y, se puede observar que no hay una gran diferencia entre los mismos para poder agruparlos según su clase.
 
 \newpage
 
-```{r g2, fig.cap="Mapa de calor",fig.align='center', fig.width=10, fig.height=6}
+```{r g2, fig.cap="Mapa de calor",fig.align='center', fig.width=10, fig.height=5}
 #Mapa de calor.Correlación entre variables
 PomaHeatmap(se_normalized,
             covs="Class",
@@ -288,9 +290,9 @@ PomaHeatmap(se_normalized,
             show_legend = TRUE)
 ```
 
-Si en un diagrama de cajas, se agrupan las muestras por clase, se puede ver que, excepto en el grupo de control, no hay un patrón entre las diferentes muestras, por lo tanto se podría decir que no se ve un efecto batch. Tampoco se puede ver un patrón claro que diferencie un grupo de otro.
+Si en un diagrama de cajas, se agrupan las muestras por clase, se puede ver que, excepto en el grupo de control, no hay un patrón entre las diferentes muestras, por lo tanto se podría decir que no se produce un *efecto batch*. Tampoco se puede ver un patrón claro que diferencie un grupo de otro.
 
-```{r fig.cap="BoxPlot por muestra \\label{fig:g3}",fig.align='center', fig.width=10, fig.height=6}
+```{r fig.cap="BoxPlot por muestra \\label{fig:g3}",fig.align='center', fig.width=10, fig.height=4}
 # Boxplot de las muestras ordenadas por clases - Efecto batch
 class_order <- order(colData(se_normalized)$Class)
 ordered_data_matrix <- assay(se_normalized)[,class_order]
@@ -313,9 +315,11 @@ legend("topright", legend = unique(colData(se_normalized)$Class),
        title = "Clases")
 ```
 
-En la siguiente figura se puede ver los intervalos de cada una de las variables en función de la clase a la que pertenecen.
+\newpage
 
-```{r fig.cap="BoxPlot por metabolito \\label{fig:g4}",fig.align='center', fig.width=10, fig.height=6}
+En la figura \ref{fig:g4} se puede ver los intervalos de cada una de las variables en función de la clase a la que pertenecen.
+
+```{r fig.cap="BoxPlot por metabolito \\label{fig:g4}",fig.align='center', fig.width=10, fig.height=5}
 PomaBoxplots(se_normalized,x = "features", outcome=NULL,
              theme_params = list(legend_title = FALSE, axis_x_rotate = TRUE))
 ```
@@ -363,17 +367,17 @@ ylabel <- paste("PCA2 ", round(vars1[2]*100,2),"%" )
 
 ```
 
-A continuación, se procede a realizar un análisis con aquellas variables que, en base al p-valor, han resultado ser significativas. Al reducir el número variable a analizar, la correlación entre las variables es bastante menor, habiendo sólo cuatro variables correlacionadas. Alguna de estas variables podría eliminarse.
+A continuación, se procede a realizar un análisis con aquellas variables que, en base al p-valor, han resultado ser significativas. Al reducir el número variable a analizar, la correlación entre las variables es bastante menor, habiendo sólo cuatro variables correlacionadas. Para evitar la multicolinealidad entre las variables, habría que estudiar si es necesario eliminar alguna de ellas para no distorsionar el modelo.
 
 `r knitr::kable(high_corr_list, col.names = c("Metabolito 1","Metabolito 2", "Correlación"),booktabs = TRUE, caption = 'Matriz de alta correlación')`
 
-Al realizar el análisis de componenetes principales, el primer componente sólo explica un `r round(vars1[1]*100,3)`. Para explicar el 70% se necesitarían al menos nueve componentes (`r round(sum(vars1[1:6])*100,3)`) y catorce componentes algo más del 80% (`r round(sum(vars1[1:9])*100,3)`).
+Al realizar el análisis de componentes principales, el primer componente sólo explica un `r round(vars1[1]*100,3)`. Para explicar el 70% se necesitarían al menos seis componentes (`r round(sum(vars1[1:6])*100,3)`) y nueve componentes algo más del 80% (`r round(sum(vars1[1:9])*100,3)`). Para reducir la complejidad de modelo, se podrían seleccionar sólo las variables significativas, ya que se reduce la dimensionalidad.
 
 `r knitr::kable(round(t(vars1[1:9]),3), col.names = c(paste0("PC", seq(1, 9))),booktabs = TRUE, caption = 'Componentes principales más representativos')`
 
-Si se visualizan los dos primeros componentes se puede apreciar una pequeña diferenciación entre los diferentes grupos, aunque no existe una gran diferencia con la el análisis realizado anteriormente y que se muestra en la figura xxx.
+En esta ocasión, al analizar los dos primeros componentes, en la figura \ref{fig:g5} no se ve una distinción tan clara entre los grupos, por lo que al reducir la dimensionalidad del modelo, es posible que no se pueda realizar un diagnóstico tan fiable.
 
-```{r fig.cap="Muestras 2 primeras PCA's \\label{fig:g5}",fig.align='center', fig.width=10, fig.height=5}
+```{r fig.cap="Muestras 2 primeras PCA's \\label{fig:g5}",fig.align='center', fig.width=10, fig.height=4}
 # Explicar hasta que nivel de componentes principales se podría coger y justificar si son muchos o no.
 bgSurv<- colSurv <- factor(colData(se_selectedNorm)$Class, levels = c("Quality Control", "Gastric Cancer", "Benign", "Healthy"),
                            labels = c("skyblue", "salmon", "lightgreen", "orange"))
@@ -388,9 +392,9 @@ legend("bottomright", legend = unique(unique(colData(se_selectedNorm)$Class)),
        title = "Clases") 
 ``` 
 
-Al igual que en el mapa de calor que se muestra en la (\@ref(fig:g2)), se puede observar que al realizar el análisis únicamente con las variables más significativas tampoco hay una agrupación significativa en función de las clase de los pacientes.
+Al igual que en el mapa de calor que se muestra en la (\@ref(fig:g2)), se puede comprobar que al realizar el análisis únicamente con las variables más significativas tampoco hay una agrupación significativa en función de las clase de los pacientes.
 
-```{r g6, fig.cap="Mapa de calor",fig.align='center', fig.width=10, fig.height=6}
+```{r g6, fig.cap="Mapa de calor",fig.align='center', fig.width=10, fig.height=5}
 #Mapa de calor.Correlación entre variables
 PomaHeatmap(se_selectedNorm,
             covs="Class",
@@ -401,7 +405,9 @@ PomaHeatmap(se_selectedNorm,
 
 Si en un diagrama de cajas, se agrupan las muestras por clase, se puede ver que, excepto en el grupo de control, no hay un patrón entre las diferentes muestras, por lo tanto se podría decir que no se ve un efecto batch. Tampoco se puede ver un patrón claro que diferencie un grupo de otro.
 
-```{r fig.cap="BoxPlot por muestra \\label{fig:g7}",fig.align='center', fig.width=10, fig.height=6}
+\newpage
+
+```{r fig.cap="BoxPlot por muestra \\label{fig:g7}",fig.align='center', fig.width=10, fig.height=5}
 # Boxplot de las muestras ordenadas por clases - Efecto batch
 class_order <- order(colData(se_selectedNorm)$Class)
 ordered_data_matrix <- assay(se_selectedNorm)[,class_order]
@@ -424,27 +430,24 @@ legend("topright", legend = unique(colData(se_selectedNorm)$Class),
        title = "Clases")
 ```
 
-En la siguiente figura se puede ver los intervalos de cada una de las variables en función de la clase a la que pertenecen.
+En la siguiente figura (Figura \ref{fig:g8}), se puede ver los intervalos de cada una de las variables en función de la clase a la que pertenecen.
 
-```{r fig.cap="BoxPlot por metabolito \\label{fig:g4}",fig.align='center', fig.width=10, fig.height=6}
+```{r fig.cap="BoxPlot por metabolito \\label{fig:g8}",fig.align='center', fig.width=10, fig.height=4}
 PomaBoxplots(se_selectedNorm,x = "features", outcome=NULL,
              theme_params = list(legend_title = FALSE, axis_x_rotate = TRUE))
 ```
 
-\newpage
-
 # Discusión, limitaciones y conclusiones del estudio
 
-Los datos del presente estudio se basan en el articulo "$^1$H-NMR urinary metabolomic profiling for diagnosis of gastric cancer" de [@Chan2015-bq] donde se refleja que los pacientes con cáncer gástrico tienen un perfil urinario metabólitico diferente y que se podría crear un perfil metabólitico para el diagnóstico precoz de cáncer gástrico.
+Los datos del presente estudio se basan en el articulo "$^1$H-NMR urinary metabolomic profiling for diagnosis of gastric cancer" de [@Chan2015-bq] donde se refleja que los pacientes con cáncer gástrico tienen un perfil urinario metabolítico diferente y que se podría crear un perfil metabolítico para el diagnóstico precoz de cáncer gástrico.
 
-En el presente estudio, se ha realizado un análisis exploratorio de los diferentes metabólitos para identificar si los valores que toman los diferentes metabolitos son diferentes cuando el paciente padece cáncer gástrico y cuales son los metabolitos más importantes para hacer posible el cáncer gástrico. En primer lugar, se han eliminado aquellas variables que no tenían la calidad adecuada, habiéndose reducido el conjunto de metabolitos a 52 de los 149 originales. Dentro del análisis univariante, se ha realizado un análisis de la varianza de cada una de las variables y se han obtenido 20 metabolitos significativos.
+En el presente estudio, se ha realizado un análisis exploratorio de los diferentes metabolitos para identificar si los valores que toman son diferentes cuando el paciente padece cáncer gástrico y si es posible su diagnóstico en base a un perfil urinario metabolómico. En primer lugar, se han eliminado aquellas variables que no tenían la calidad adecuada, habiéndose reducido el conjunto de metabolitos a 52 de los 149 originales. Dentro del análisis univariante, se ha realizado un análisis de la varianza de cada una de las variables y se han obtenido 20 metabolitos significativos.
 
 Posteriormente, se ha realizado un análisis multivariante basado en el análisis de componentes principales para ambos grupos y no se han visto resultados concluyentes. Con ambos grupos de variables se ha observado que se necesita un numero mayor de 6 componentes para poder explicar al menos el 70% del comportamiento, por lo que la dimensionalidad sigue siendo bastante compleja.
 
 Tanto en los mapas de calor como en los boxplot, tampoco se aprecian agrupaciones claras dentro de las diferentes muestras que permitan identificar el cáncer gástrico. Ni siquiera se pueden apreciar que algunas variables tomen valores diferentes si la clase es cáncer gástrico o no.
 
 Se puede llegar a la conclusión que el análisis exploratorio realizado no es suficiente y que sería necesario estudiar más modelos que ayuden a realizar el diagnóstico precoz de cáncer gástrico.
-
 
 # References
 
