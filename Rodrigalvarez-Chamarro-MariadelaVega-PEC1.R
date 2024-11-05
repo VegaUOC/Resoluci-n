@@ -5,14 +5,15 @@
 # Librería Bioconductor
 if (!require("BiocManager", quietly = TRUE))
   install.packages("BiocManager")
+BiocManager::install(version = "3.20")
 BiocManager::install("SummarizedExperiment")
 library("SummarizedExperiment")
 
-BiocManager::install("POMA")
+BiocManager::install("POMA", quietly = TRUE)
 library("POMA")
 
 if (!require("ComplexHeatmap"))
-  BiocManager::install("ComplexHeatmap")
+  BiocManager::install("ComplexHeatmap",version="3.20")
 library("ComplexHeatmap")
 
 if (!require(ggtext)){
@@ -46,7 +47,7 @@ meta_info <-  readLines("./data/GastricCancer/description.md")
 samples_matrix <- t(as.matrix(samples_data[,5:153]))
 colnames(samples_matrix) <- unlist(samples_data[,2])
 rows_info <- DataFrame(row_data[,2:5])
-cols_info <- DataFrame(samples_data[,2:4])
+cols_info <- DataFrame(samples_data[,c(4,3)])
 
 # Refactorización clase dentro las columnas.
 cols_info$Class <- factor(cols_info$Class, levels = c("QC", "GC", "BN", "HE"),
@@ -110,35 +111,38 @@ se_normalized <- PomaNorm(se_preprocessed,method="auto_scaling")
 rowData(se_normalized) <- rowData(se)[rownames(se_preprocessed),]
 se_normalized
 
-#https://aspteaching.github.io/AMVCasos/#ejemplo-pca-1-b%C3%BAsqueda-de-factores-latentes-en-datos-ecol%C3%B3gicos1
-
-# Matriz de covarianzas 
-n <- dim(t(assay(se_normalized)))[2]
-S<-cov(t(assay(se_normalized)))*(n-1)/n
-show(S)
-
 # Matriz de correlaciones
-R<-cor(t(assay(se_normalized)))
-show(R)
+cor_matrix <-cor(t(assay(se_normalized)))
+show(cor_matrix)
+
+# Umbral de correlaciones
+threshold <- 0.8
+# Seleccionar las correlaciones absolutas mayores que el umbral (excluyendo la diagonal)
+high_corr <- which(abs(cor_matrix) > threshold & abs(cor_matrix) < 1, arr.ind = TRUE)
+
+high_corr_list <- data.frame(
+  Var1 = rownames(cor_matrix)[high_corr[, 1]],
+  Var2 = colnames(cor_matrix)[high_corr[, 2]],
+  Correlation = cor_matrix[high_corr]
+)
+
+high_corr_list
 
 # Diagonalización de la matriz de covarianzas
-EIG <- eigen(S)
+EIG <- eigen(cor_matrix)
 show(EIG)
 
 eigenVecs1 <- EIG$vectors
 PCAS1 <- t(assay(se_normalized)) %*% eigenVecs1
 head(PCAS1)
 
-plot(PCAS1[,1], PCAS1[,2], main = "Muestras. 2 primeras PCs")
-
+# Significación de los diferentes componentes
 vars1<- EIG$values/sum(EIG$values)
 round(vars1,3)
-
 xlabel <- paste("PCA1 ", round(vars1[1]*100, 2),"%" )
 ylabel <- paste("PCA2 ", round(vars1[2]*100,2),"%" )
-plot(PCAS1[,1], PCAS1[,2], main = "Muestras. 2 primeras PCs",
-     xlab=xlabel, ylab=ylabel)
 
+# Explicar hasta que nivel de componentes principales se podría coger y justificar si son muchos o no.
 bgSurv<- colSurv <- factor(colData(se)$Class, levels = c("Quality Control", "Gastric Cancer", "Benign", "Healthy"),
                            labels = c("skyblue", "salmon", "lightgreen", "orange"))
 pchSurv <- factor(colData(se)$Class, levels = c("Quality Control", "Gastric Cancer", "Benign", "Healthy"),
@@ -147,53 +151,18 @@ pchSurv <- factor(colData(se)$Class, levels = c("Quality Control", "Gastric Canc
 plot(PCAS1[,1], PCAS1[,2], main = "Muestras. 2 primeras PCs",
      xlab=xlabel, ylab=ylabel, 
      col=colSurv, bg=bgSurv,pch=as.numeric(pchSurv))
-legend("bottomright", legend = unique(sample_classes), 
+legend("bottomright", legend = unique(unique(colData(se_normalized)$Class)), 
        fill = c("black", "salmon", "lightgreen", "skyblue"), 
        title = "Clases") 
 
-PCAS2 <- princomp(t(assay(se_normalized)))
-names(PCAS2)
-PCAS2
-
-PCAS3 <- prcomp(t(assay(se_normalized)))
-names(PCAS3)
-PCAS3
-
-PCAS2$sdev
-
-PCAS2$loadings
-
-PCAS3$rotation[,1]
-
-plotPCA <- function (X, labels=NULL, colors=NULL, dataDesc="", scale=FALSE, cex4text=0.8)
-  {
-  pcX<-prcomp(X, scale=scale) # o prcomp(t(X))
-  loads<- round(pcX$sdev^2/sum(pcX$sdev^2)*100,1)
-  xlab<-c(paste("PC1",loads[1],"%"))
-  ylab<-c(paste("PC2",loads[2],"%"))
-  if (is.null(colors)) colors=1
-  plot(pcX$x[,1:2],xlab=xlab,ylab=ylab, col=colors,  
-       xlim=c(min(pcX$x[,1])-10, max(pcX$x[,1])+10),
-       ylim=c(min(pcX$x[,2])-10, max(pcX$x[,2])+10))
-  #text(pcX$x[,1],pcX$x[,2], labels, pos=3, cex=cex4text)
-  title(paste("Plot of first 2 PCs for expressions in", dataDesc, sep=" "), cex=0.8)
-}
-
-sampleNames <- colnames(se_normalized)
-plotPCA(t(assay(se_normalized)), labels=sampleNames, colors=colSurv, dataDesc="selected samples", cex4text=0.6)
-
-# Mapo de calor
+# Mapa de calor
 manDist <- dist(t(assay(se_normalized)))
 heatmap (as.matrix(manDist), col=heat.colors(16))
 
-require(MASS)
-sam1<-sammon (manDist, trace=FALSE)
-plot(sam1$points)
-text(sam1$points, colData(se_normalized)$Class, pos=4)
-
 # Mapa de calor.Correlación entre variables
 PomaHeatmap(se_normalized,
-            sample_names = TRUE,
+            covs="Class",
+            sample_names = FALSE,
             feature_names = TRUE,
             show_legend = TRUE)
 
@@ -210,11 +179,103 @@ boxplot(ordered_data_matrix,
         main = "Boxplot de Muestras por Clase",
         xlab = "Muestras",
         ylab = "Metabolitos x muestra",
+        ylim = c(-1,6),
         names = colnames(se_normalized)[class_order])  # Nombres de las muestras en el orden de las clases
 
 # Añadir una leyenda
-legend("topright", legend = unique(sample_classes), 
+legend("topright", legend = unique(colData(se_normalized)$Class), 
        fill = c("black", "salmon", "lightgreen", "skyblue"), 
        title = "Clases")
+PomaBoxplots(se_normalized,x = "samples",outcome="Class")
+PomaBoxplots(se_normalized,x = "features", outcome=NULL,
+             theme_params = list(legend_title = FALSE, axis_x_rotate = TRUE))
 
+# Variables significativas según el p-Valor
+
+selectedRows <- rowData(se_preprocessed)$Name %in% resum$ID[resum$pValue<0.05]
+se_selected <- se_preprocessed[selectedRows,]
+
+# Normalización y gráficas
+se_selectedNorm <- PomaNorm(se_selected,method="auto_scaling")
+rowData(se_selectedNorm) <- rowData(se)[rownames(se_selected),]
+se_selectedNorm
+
+# Matriz de correlaciones
+cor_matrix <-cor(t(assay(se_selectedNorm)))
+show(cor_matrix)
+
+# Umbral de correlaciones
+threshold <- 0.8
+# Seleccionar las correlaciones absolutas mayores que el umbral (excluyendo la diagonal)
+high_corr <- which(abs(cor_matrix) > threshold & abs(cor_matrix) < 1, arr.ind = TRUE)
+
+high_corr_list <- data.frame(
+  Var1 = rownames(cor_matrix)[high_corr[, 1]],
+  Var2 = colnames(cor_matrix)[high_corr[, 2]],
+  Correlation = cor_matrix[high_corr]
+)
+
+high_corr_list
+
+# Diagonalización de la matriz de covarianzas
+EIG <- eigen(cor_matrix)
+show(EIG)
+
+eigenVecs1 <- EIG$vectors
+PCAS1 <- t(assay(se_selectedNorm)) %*% eigenVecs1
+head(PCAS1)
+
+# Significación de los diferentes componentes
+vars1<- EIG$values/sum(EIG$values)
+round(vars1,3)
+xlabel <- paste("PCA1 ", round(vars1[1]*100, 2),"%" )
+ylabel <- paste("PCA2 ", round(vars1[2]*100,2),"%" )
+
+# Explicar hasta que nivel de componentes principales se podría coger y justificar si son muchos o no.
+bgSurv<- colSurv <- factor(colData(se_selectedNorm)$Class, levels = c("Quality Control", "Gastric Cancer", "Benign", "Healthy"),
+                           labels = c("skyblue", "salmon", "lightgreen", "orange"))
+pchSurv <- factor(colData(se_selectedNorm)$Class, levels = c("Quality Control", "Gastric Cancer", "Benign", "Healthy"),
+                  labels = c(1, 2, 3, 4))
+
+plot(PCAS1[,1], PCAS1[,2], main = "Muestras. 2 primeras PCs",
+     xlab=xlabel, ylab=ylabel, 
+     col=colSurv, bg=bgSurv,pch=as.numeric(pchSurv))
+legend("bottomright", legend = unique(unique(colData(se_selectedNorm)$Class)), 
+       fill = c("black", "salmon", "lightgreen", "skyblue"), 
+       title = "Clases") 
+
+# Mapa de calor
+manDist <- dist(t(assay(se_selectedNorm)))
+heatmap (as.matrix(manDist), col=heat.colors(16))
+
+# Mapa de calor.Correlación entre variables
+PomaHeatmap(se_selectedNorm,
+            covs="Class",
+            sample_names = TRUE,
+            feature_names = TRUE,
+            show_legend = TRUE)
+
+# Boxplot de las muestras ordenadas por clases - Efecto batch
+class_order <- order(colData(se_selectedNorm)$Class)
+ordered_data_matrix <- assay(se_selectedNorm)[,class_order]
+
+colors <- factor(colData(se_selectedNorm)$Class[class_order], levels = c("Quality Control", "Gastric Cancer", "Benign", "Healthy"),
+                 labels = c("skyblue", "salmon", "lightgreen", "orange"))
+
+boxplot(ordered_data_matrix,
+        col = colors,                       # Colores según el grupo
+        las = 2,                            # Rotación de etiquetas en el eje X
+        main = "Boxplot de Muestras por Clase",
+        xlab = "Muestras",
+        ylab = "Metabolitos x muestra",
+        ylim = c(-1,6),
+        names = colnames(se_selectedNorm)[class_order])  # Nombres de las muestras en el orden de las clases
+
+# Añadir una leyenda
+legend("topright", legend = unique(colData(se_selectedNorm)$Class), 
+       fill = c("black", "salmon", "lightgreen", "skyblue"), 
+       title = "Clases")
+PomaBoxplots(se_selectedNorm,x = "samples",outcome="Class")
+PomaBoxplots(se_selectedNorm,x = "features", outcome=NULL,
+             theme_params = list(legend_title = FALSE, axis_x_rotate = TRUE))
 
