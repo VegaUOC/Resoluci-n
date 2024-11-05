@@ -3,13 +3,12 @@ title: "PEC1. Análisis de datos Ómicos."
 author: "<i>Mª de la Vega Rodrigálvarez Chamarro</i>"
 date: '<i>`r format(Sys.Date(),"%e de %B, %Y")`</i>'
 output: 
-  html_document:
+  pdf_document:
     toc: true
-    toc_float: true
     toc_depth: 3
     number_sections: true
     latex_engine: xelatex
-    fig_caption: true
+    fig_caption: yes
   bookdown::html_document2:
     toc: true
     toc_float: true
@@ -17,12 +16,13 @@ output:
     number_sections: true
     latex_engine: xelatex
     fig_caption: true
-  pdf_document:
+  html_document:
     toc: true
+    toc_float: true
     toc_depth: 3
     number_sections: true
     latex_engine: xelatex
-    fig_caption: yes
+    fig_caption: true
 editor_options: 
   markdown: 
     wrap: 72
@@ -71,6 +71,15 @@ if (!require(readxl)){
   library(readxl)
 }
 
+if (!require(ggtext)){
+  install.packages("ggtext")
+  library(ggtext)
+}
+
+if (!require(magrittr)){
+  install.packages("magrittr")
+  library(magrittr)
+}
 
 ```
 
@@ -448,6 +457,10 @@ Posteriormente, se ha realizado un análisis multivariante basado en el análisi
 Tanto en los mapas de calor como en los boxplot, tampoco se aprecian agrupaciones claras dentro de las diferentes muestras que permitan identificar el cáncer gástrico. Ni siquiera se pueden apreciar que algunas variables tomen valores diferentes si la clase es cáncer gástrico o no.
 
 Se puede llegar a la conclusión que el análisis exploratorio realizado no es suficiente y que sería necesario estudiar más modelos que ayuden a realizar el diagnóstico precoz de cáncer gástrico.
+
+# Notas
+
+Todo el código y los datos utilizados en la presente práctica se encuentran en el siguiente repositorio de Github: [https://github.com/VegaUOC/Rodrigalvarez-Chamarro-MariadelaVega-PEC1](https://github.com/VegaUOC/Rodrigalvarez-Chamarro-MariadelaVega-PEC1)
 
 # References
 

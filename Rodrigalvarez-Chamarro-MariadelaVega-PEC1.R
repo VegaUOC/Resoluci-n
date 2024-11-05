@@ -26,10 +26,16 @@ if (!require(magrittr)){
   library(magrittr)
 }
 
-# Paquete de trabajo para la carga de datos en excelz
+# Paquete de trabajo para la carga de datos en excel
 if (!require(readxl)){
   install.packages("readxl")
   library(readxl)
+}
+
+# Paquete de trabajo para la grabación de datos en csv
+if (!require(readr)){
+  install.packages("readr")
+  library(readr)
 }
 
 ##### Directorio de trabajo
@@ -56,6 +62,18 @@ cols_info$Class <- factor(cols_info$Class, levels = c("QC", "GC", "BN", "HE"),
 # Construye el objeto SummarizedExperiment
 se <- SummarizedExperiment(assays=samples_matrix, colData=cols_info, rowData = rows_info, metadata =meta_info)
 se
+
+#Almacenar en un objeto binario el objeto summarized experiment
+save(se, file = "data/GastricCancer_SE.rda")
+
+# Carga el objeto se
+load(file = "data/GastricCancer_SE.rda")
+
+# Grabar los datos en un fichero
+write_csv(cbind(ID=rownames(se),as.data.frame(assay(se))), "data/GC_metabolite.csv", append = FALSE, col_names = TRUE)
+write_csv(cbind(ID = colnames(se),as.data.frame(colData(se))), "data/GC_sampleMetada.csv", append = FALSE, col_names = TRUE)
+write_csv(cbind(ID =rownames(se),as.data.frame(rowData(se))), "data/GC_metaboliteMetaData.csv", append = FALSE, col_names = TRUE)
+
 
 ##### Análisis exploratorio
 
@@ -190,8 +208,9 @@ PomaBoxplots(se_normalized,x = "samples",outcome="Class")
 PomaBoxplots(se_normalized,x = "features", outcome=NULL,
              theme_params = list(legend_title = FALSE, axis_x_rotate = TRUE))
 
-# Variables significativas según el p-Valor
 
+
+# Variables significativas según el p-Valor
 selectedRows <- rowData(se_preprocessed)$Name %in% resum$ID[resum$pValue<0.05]
 se_selected <- se_preprocessed[selectedRows,]
 
